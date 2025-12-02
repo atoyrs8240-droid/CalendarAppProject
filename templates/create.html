@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>予定の作成</title>
+</head>
+<body>
+    <h1>新しい予定を作成</h1>
+    <form method="POST" action="/create">
+        <label for="title">タイトル:</label>
+        <input type="text" id="title" name="title" required><br><br>
+
+        <label for="date">日付 (例: YYYY-MM-DD):</label>
+        <input type="text" id="date" name="date" required><br><br>
+
+        <label for="description">詳細:</label><br>
+        <textarea id="description" name="description"></textarea><br><br>
+
+        <button type="submit">保存</button>
+    </form>
+    <p><a href="/">トップへ戻る</a></p>
+</body>
+</html>
