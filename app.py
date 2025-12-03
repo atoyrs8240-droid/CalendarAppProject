@@ -11,17 +11,23 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 # -----------------------------------
 
-# 予定のデータ構造（変更なし）
+# 予定のデータ構造（時間と満足度カラムを追加）
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     date = db.Column(db.String(20), nullable=False)
+    # --- 【時間データを追加】 ---
+    start_time = db.Column(db.String(10), nullable=True) # 開始時間 (例: "09:00")
+    end_time = db.Column(db.String(10), nullable=True)   # 終了時間 (例: "10:00")
+    # ---------------------------
     description = db.Column(db.Text, nullable=True)
-    # --- 【ここを追記】 フィードバックの収集用カラム ---
+    # --- 【満足度データを追加】 ---
     satisfaction = db.Column(db.Integer, default=0, nullable=True) # 0:未評価, 1-5:満足度
-    # -----------------------------------------------
+    # ---------------------------
     
-    def __repr__(self):        return f"Event('{self.title}', '{self.date}')"
+    def __repr__(self):
+        # f-stringの中身も修正が必要です
+        return f"Event('{self.title}', '{self.date}', '{self.start_time}-{self.end_time}')"
 
 # --- トップページ（修正） ---
 @app.route('/')
@@ -41,10 +47,16 @@ def create_event():
         # フォームからデータを取得
         event_title = request.form['title']
         event_date = request.form['date']
+        # --- 【ここを修正】 時間データを取得 ---
+        event_start_time = request.form['start_time']
+        event_end_time = request.form['end_time']
+        # ------------------------------------
         event_description = request.form['description']
         
         # データベースに保存するための新しいEventオブジェクトを作成
-        new_event = Event(title=event_title, date=event_date, description=event_description)
+        new_event = Event(title=event_title, date=event_date,
+                          start_time=event_start_time, end_time=event_end_time, # <-- ここに追加
+                          description=event_description)
         
         try:
             db.session.add(new_event) # データベースに追加
@@ -74,9 +86,12 @@ def update_event(id):
     # フォームから送られた新しいデータを取得
     event.title = request.form['title']
     event.date = request.form['date']
-    event.description = request.form['description']
-    # --- 【ここを追記】 満足度データを取得 ---
+    # --- 【ここを修正】 時間と満足度データを取得 ---
+    event.start_time = request.form['start_time']
+    event.end_time = request.form['end_time']
     event.satisfaction = request.form['satisfaction']
+    # ---------------------------------------------
+    event.description = request.form['description']
 
     try:
         db.session.commit() # 変更を確定

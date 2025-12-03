@@ -12,13 +12,18 @@
 
         <label for="date">日付 (例: YYYY-MM-DD):</label>
         <input type="text" id="date" name="date" value="{{ event.date }}" required><br><br>
+        
+        <label for="start_time">開始時間 (例: 09:00):</label>
+        <input type="text" id="start_time" name="start_time" value="{{ event.start_time }}" placeholder="HH:MM" required><br><br>
 
+        <label for="end_time">終了時間 (例: 10:00):</label>
+        <input type="text" id="end_time" name="end_time" value="{{ event.end_time }}" placeholder="HH:MM" required><br><br>
         <label for="description">詳細:</label><br>
         <textarea id="description" name="description">{{ event.description }}</textarea><br><br>
 
+        <label for="satisfaction">あなたの満足度 (1-5, 5が最高):</label>
+        <input type="number" id="satisfaction" name="satisfaction" value="{{ event.satisfaction if event.satisfaction else 0 }}" min="0" max="5"><br><br>
         <button type="submit">📝 変更を保存 (Update)</button>
-<label for="satisfaction">あなたの満足度 (1-5, 5が最高):</label>
-<input type="number" id="satisfaction" name="satisfaction" value="{{ event.satisfaction if event.satisfaction else 0 }}" min="0" max="5"><br><br>
     </form>
     
     <hr>
