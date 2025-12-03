@@ -98,7 +98,6 @@ def delete_event(id):
 @app.route('/analyze')
 def analyze_events():
     # データベースから全データをPandas DataFrameとして取得
-    # SQLクエリを使ってデータを取得
     query = db.session.query(Event)
     df = pd.read_sql(query.statement, db.engine)
 
@@ -106,19 +105,34 @@ def analyze_events():
     if not df.empty:
         # 簡易分析結果の計算例：予定の総数を計算
         total_events = len(df)
-
+        
+        # --- ESアピール用の具体的な分析 ---
+        # 1. タイトルごとの出現回数をカウント
+        title_counts = df['title'].value_counts().reset_index()
+        title_counts.columns = ['予定のタイトル', '件数']
+        
+        # 2. 最も多い予定のタイトルと件数を取得
+        top_title = title_counts.iloc[0]['予定のタイトル']
+        top_count = int(title_counts.iloc[0]['件数']) # intに変換
+        
+        # 3. 件数の多い順にソートした全件数をHTMLとして準備
+        count_data_table = title_counts.to_html(classes='data', index=False)
+        
         # 分析結果をテンプレートに渡す辞書
         analysis_data = {
             'total_events': total_events,
+            'top_title': top_title,
+            'top_count': top_count
         }
-
+        
         # 取得したデータの一部（例: 最新5件）をHTMLテーブルにしてテンプレートに渡す
         display_data = df.tail(5).to_html(classes='data', index=False)
     else:
-        analysis_data = {'total_events': 0}
+        analysis_data = {'total_events': 0, 'top_title': '', 'top_count': 0}
         display_data = "<p>分析できるデータがありません。</p>"
+        count_data_table = "<p>データがありません。</p>"
 
-    return render_template('analyze.html', analysis=analysis_data, data_table=display_data)
+    return render_template('analyze.html', analysis=analysis_data, data_table=display_data, count_data_table=count_data_table)
 
 # --- サーバー起動部分（変更なし） ---
 if __name__ == '__main__':

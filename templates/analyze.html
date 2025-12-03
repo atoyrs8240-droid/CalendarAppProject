@@ -11,6 +11,28 @@
     <h2>概要</h2>
     <p>登録されている予定の総数: <strong>{{ analysis.total_events }} 件</strong></p>
     
+    <hr>
+    
+    <h2>🎯 ESでのアピール分析: 最も力を入れている活動の傾向</h2>
+    {% if analysis.total_events > 0 %}
+        <p>
+            あなたの予定の中で、件数が最も多い活動は「**{{ analysis.top_title }}**」です。（合計 {{ analysis.top_count }} 件）
+        </p>
+        
+        <div style="border: 1px solid #ccc; padding: 10px; margin-top: 15px;">
+            **【ESでのアピール例文】**
+            <br>
+            「このカレンダーアプリのデータ分析機能により、私は自身の活動の中で『**{{ analysis.top_title }}**』に最も時間を費やしている傾向を特定しました。この客観的なデータに基づき、私は**現状の課題解決**に最もコミットしていると自己分析し、時間配分を見直しました。」
+        </div>
+
+        <h3>タイトル別 件数一覧</h3>
+        {{ count_data_table | safe }}
+    {% else %}
+        <p>分析にはデータが必要です。「新しい予定を作成」からデータを登録してください。</p>
+    {% endif %}
+
+    <hr>
+    
     <h2>最新の登録データ</h2>
     {{ data_table | safe }}
     
