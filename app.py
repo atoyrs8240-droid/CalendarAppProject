@@ -112,45 +112,68 @@ def delete_event(id):
     except:
         return '予定の削除中にエラーが発生しました'
 
-# --- データ分析機能（ESのアピールポイント） ---
+# --- データ分析機能（最終版：最適時間提案に向けた分析） ---
 @app.route('/analyze')
 def analyze_events():
-    # データベースから全データをPandas DataFrameとして取得
     query = db.session.query(Event)
     df = pd.read_sql(query.statement, db.engine)
-
-    # データの処理（ESでの分析内容をここに追加します）
-    if not df.empty:
-        # 簡易分析結果の計算例：予定の総数を計算
-        total_events = len(df)
+    
+    analysis_data = {'total_events': 0, 'optimized_suggestion': 'データ不足'}
+    count_data_table = "<p>データがありません。</p>"
+    optimized_data_table = "<p>データがありません。</p>"
+    display_data = "<p>分析できるデータがありません。</p>"
+    
+    if not df.empty and len(df) > 0:
         
-        # --- ESアピール用の具体的な分析 ---
-        # 1. タイトルごとの出現回数をカウント
+        # 1. データのクレンジングと特徴量生成
+        # Pandasで日付と時間を結合し、datetime型に変換
+        df['start_dt'] = pd.to_datetime(df['date'] + ' ' + df['start_time'])
+        df['end_dt'] = pd.to_datetime(df['date'] + ' ' + df['end_time'])
+        # 予定の実行時間（分）を計算
+        df['duration_min'] = (df['end_dt'] - df['start_dt']).dt.total_seconds() / 60
+        
+        # 2. ESでアピールする分析：満足度の高い活動の最適な時間
+        
+        # 満足度4以上の活動に限定
+        high_satisfaction_df = df[df['satisfaction'] >= 4]
+
+        optimized_suggestion = "データ不足：満足度4以上の活動がありません。評価を入力してください。"
+
+        if not high_satisfaction_df.empty:
+            # 活動タイトルごとに平均持続時間を計算し、分を時間と分に変換
+            optimized_duration = high_satisfaction_df.groupby('title')['duration_min'].mean().round(0).astype(int).reset_index()
+            optimized_duration.columns = ['活動タイトル', '平均最適時間（分）']
+            
+            # 最も多く最適化されたタイトルを取得
+            top_optimized_min = optimized_duration.iloc[0]['平均最適時間（分）']
+            
+            # 提案メッセージを生成
+            h = top_optimized_min // 60
+            m = top_optimized_min % 60
+            
+            optimized_suggestion = f"最も満足度が高い活動の平均実行時間は **{h}時間{m}分** です。"
+            
+            # HTMLテーブルとして準備
+            optimized_data_table = optimized_duration.to_html(classes='data', index=False)
+            
+        # 3. 概要情報 (タイトル別件数)
         title_counts = df['title'].value_counts().reset_index()
         title_counts.columns = ['予定のタイトル', '件数']
-        
-        # 2. 最も多い予定のタイトルと件数を取得
-        top_title = title_counts.iloc[0]['予定のタイトル']
-        top_count = int(title_counts.iloc[0]['件数']) # intに変換
-        
-        # 3. 件数の多い順にソートした全件数をHTMLとして準備
         count_data_table = title_counts.to_html(classes='data', index=False)
         
-        # 分析結果をテンプレートに渡す辞書
         analysis_data = {
-            'total_events': total_events,
-            'top_title': top_title,
-            'top_count': top_count
+            'total_events': len(df),
+            'optimized_suggestion': optimized_suggestion
         }
         
-        # 取得したデータの一部（例: 最新5件）をHTMLテーブルにしてテンプレートに渡す
-        display_data = df.tail(5).to_html(classes='data', index=False)
-    else:
-        analysis_data = {'total_events': 0, 'top_title': '', 'top_count': 0}
-        display_data = "<p>分析できるデータがありません。</p>"
-        count_data_table = "<p>データがありません。</p>"
-
-    return render_template('analyze.html', analysis=analysis_data, data_table=display_data, count_data_table=count_data_table)
+        display_data = df.tail(5)[['title', 'date', 'start_time', 'end_time', 'satisfaction']].to_html(classes='data', index=False)
+    
+    return render_template('analyze.html', 
+                           analysis=analysis_data, 
+                           data_table=display_data, 
+                           count_data_table=count_data_table,
+                           optimized_data_table=optimized_data_table
+                          )
 
 # --- サーバー起動部分（変更なし） ---
 if __name__ == '__main__':
