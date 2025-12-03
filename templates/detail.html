@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ event.title }} の詳細・編集</title>
+</head>
+<body>
+    <h1>予定の詳細・編集</h1>
+    
+    <form method="POST" action="/update/{{ event.id }}">
+        <label for="title">タイトル:</label>
+        <input type="text" id="title" name="title" value="{{ event.title }}" required><br><br>
+
+        <label for="date">日付 (例: YYYY-MM-DD):</label>
+        <input type="text" id="date" name="date" value="{{ event.date }}" required><br><br>
+
+        <label for="description">詳細:</label><br>
+        <textarea id="description" name="description">{{ event.description }}</textarea><br><br>
+
+        <button type="submit">📝 変更を保存 (Update)</button>
+    </form>
+    
+    <hr>
+    
+    <form method="POST" action="/delete/{{ event.id }}">
+        <button type="submit" onclick="return confirm('本当に削除しますか？');">🗑️ 予定を削除 (Delete)</button>
+    </form>
+
+    <p><a href="/">予定一覧へ戻る</a></p>
+</body>
+</html>

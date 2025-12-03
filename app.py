@@ -54,6 +54,45 @@ def create_event():
     # ただページにアクセスした場合（フォームを表示）
     return render_template('create.html')
 
+# --- 予定の詳細表示・編集機能（CRUDの Read/Update） ---
+@app.route('/detail/<int:id>')
+def detail_event(id):
+    # IDに基づいて予定をデータベースから取得する。なければ404エラー
+    event = Event.query.get_or_404(id)
+    return render_template('detail.html', event=event)
+
+
+# --- 予定の更新機能（CRUDの Update） ---
+@app.route('/update/<int:id>', methods=['POST'])
+def update_event(id):
+    # IDに基づいて予定を取得
+    event = Event.query.get_or_404(id)
+    
+    # フォームから送られた新しいデータを取得
+    event.title = request.form['title']
+    event.date = request.form['date']
+    event.description = request.form['description']
+
+    try:
+        db.session.commit() # 変更を確定
+        return redirect(url_for('index')) # トップページに戻る
+    except:
+        return '予定の更新中にエラーが発生しました'
+
+
+# --- 予定の削除機能（CRUDの Delete） ---
+@app.route('/delete/<int:id>', methods=['POST'])
+def delete_event(id):
+    # IDに基づいて予定を取得
+    event = Event.query.get_or_404(id)
+    
+    try:
+        db.session.delete(event) # データベースから削除
+        db.session.commit()      # 変更を確定
+        return redirect(url_for('index')) # トップページに戻る
+    except:
+        return '予定の削除中にエラーが発生しました'
+
 # --- サーバー起動部分（変更なし） ---
 if __name__ == '__main__':
     with app.app_context():
