@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import os 
 import pandas as pd
+from sklearn.linear_model import LinearRegression
+import numpy as np
 
 # --- データベース設定（変更なし） ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -112,67 +114,92 @@ def delete_event(id):
     except:
         return '予定の削除中にエラーが発生しました'
 
-# --- データ分析機能（最終版：最適時間提案に向けた分析） ---
+# --- データ分析機能（最終版：二次回帰分析による予測ロジック） ---
 @app.route('/analyze')
 def analyze_events():
     query = db.session.query(Event)
     df = pd.read_sql(query.statement, db.engine)
     
-    analysis_data = {'total_events': 0, 'optimized_suggestion': 'データ不足'}
+    analysis_data = {'total_events': 0, 'regression_result': '分析データ不足'}
     count_data_table = "<p>データがありません。</p>"
-    optimized_data_table = "<p>データがありません。</p>"
     display_data = "<p>分析できるデータがありません。</p>"
     
-    if not df.empty and len(df) > 0:
+    # 回帰分析には最低3つのデータが必要
+    if not df.empty and len(df) >= 3: 
         
         # 1. データのクレンジングと特徴量生成
-        # Pandasで日付と時間を結合し、datetime型に変換
         df['start_dt'] = pd.to_datetime(df['date'] + ' ' + df['start_time'])
         df['end_dt'] = pd.to_datetime(df['date'] + ' ' + df['end_time'])
         # 予定の実行時間（分）を計算
         df['duration_min'] = (df['end_dt'] - df['start_dt']).dt.total_seconds() / 60
         
-        # 2. ESでアピールする分析：満足度の高い活動の最適な時間
+        # 実行時間が0のデータを除外
+        clean_df = df[df['duration_min'] > 0]
         
-        # 満足度4以上の活動に限定
-        high_satisfaction_df = df[df['satisfaction'] >= 4]
+        if len(clean_df) >= 3:
+            # 1. 特徴量エンジニアリング：二次特徴量（X^2）を追加
+            X_linear = clean_df['duration_min'].values.reshape(-1, 1) # X (実行時間)
+            X_squared = X_linear ** 2 # X^2 (実行時間の二乗)
+            
+            # XとX^2を結合して、新しい説明変数X_polyを作成
+            X_poly = np.hstack((X_linear, X_squared))
 
-        optimized_suggestion = "データ不足：満足度4以上の活動がありません。評価を入力してください。"
+            Y = clean_df['satisfaction'].values   # 目的変数 (満足度)
+            
+            # 2. 線形回帰モデルの構築と学習 (XとX^2の項を持つため、二次モデルを表現できる)
+            model = LinearRegression()
+            model.fit(X_poly, Y)
+            
+            # 3. 分析結果の抽出
+            # X^2の係数 (a) と Xの係数 (b) を取得
+            coefficient_X2 = round(model.coef_[1], 5) # X^2の係数 (a)
+            coefficient_X = round(model.coef_[0], 3) # Xの係数 (b)
+            r_squared = round(model.score(X_poly, Y), 3)
 
-        if not high_satisfaction_df.empty:
-            # 活動タイトルごとに平均持続時間を計算し、分を時間と分に変換
-            optimized_duration = high_satisfaction_df.groupby('title')['duration_min'].mean().round(0).astype(int).reset_index()
-            optimized_duration.columns = ['活動タイトル', '平均最適時間（分）']
+            # 結果に基づくメッセージ生成 (X^2の係数が負であれば、最適な点が存在する非線形関係)
+            if coefficient_X2 < -0.00001: 
+                # **【最適な実行時間の計算を追記】**
+                # Optimal Time (分) = -b / (2a)
+                optimal_time_min = round(-coefficient_X / (2 * coefficient_X2))
+                
+                # 結果メッセージを更新
+                correlation_text = f"""実行時間と満足度の間に**上に凸の二次曲線的な非線形な相関**が見られます。
+最適な実行時間（満足度を最大にする時間）は **{optimal_time_min} 分** です。"""
             
-            # 最も多く最適化されたタイトルを取得
-            top_optimized_min = optimized_duration.iloc[0]['平均最適時間（分）']
+            else:
+                optimal_time_min = "算出不能"
+                correlation_text = "二次モデルを適用しましたが、非線形な相関は確認できませんでした。"
             
-            # 提案メッセージを生成
-            h = top_optimized_min // 60
-            m = top_optimized_min % 60
+            regression_result_message = f"""
+            **【二次回帰分析の結果】**
+            予測モデル: 満足度 = ({coefficient_X2}) X² + ({coefficient_X}) X + (切片)
+            決定係数 (R-squared): {r_squared}
+            結果: {correlation_text}
+            """
             
-            optimized_suggestion = f"最も満足度が高い活動の平均実行時間は **{h}時間{m}分** です。"
+            analysis_data['regression_result'] = regression_result_message
+            analysis_data['total_events'] = len(df)
             
-            # HTMLテーブルとして準備
-            optimized_data_table = optimized_duration.to_html(classes='data', index=False)
-            
-        # 3. 概要情報 (タイトル別件数)
+        else:
+            analysis_data['regression_result'] = "データ不足：実行時間が0でないデータが3件未満です。"
+            analysis_data['total_events'] = len(df)
+
+
+        # 概要情報 (タイトル別件数) は残しておく
         title_counts = df['title'].value_counts().reset_index()
         title_counts.columns = ['予定のタイトル', '件数']
         count_data_table = title_counts.to_html(classes='data', index=False)
         
-        analysis_data = {
-            'total_events': len(df),
-            'optimized_suggestion': optimized_suggestion
-        }
-        
-        display_data = df.tail(5)[['title', 'date', 'start_time', 'end_time', 'satisfaction']].to_html(classes='data', index=False)
+        display_data = df.tail(5)[['title', 'date', 'start_time', 'end_time', 'satisfaction', 'duration_min']].to_html(classes='data', index=False)
     
+    else:
+        analysis_data['regression_result'] = f"データ不足：回帰分析には最低3件のデータが必要です。現在 {len(df)} 件です。"
+        analysis_data['total_events'] = len(df)
+
     return render_template('analyze.html', 
                            analysis=analysis_data, 
                            data_table=display_data, 
-                           count_data_table=count_data_table,
-                           optimized_data_table=optimized_data_table
+                           count_data_table=count_data_table
                           )
 
 # --- サーバー起動部分（変更なし） ---
