@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>予定一覧</title>
+</head>
+<body>
+    <h1>📅 予定一覧</h1>
+
+    <p><a href="/create">＋ 新しい予定を作成</a></p>
+
+    {% if events %}
+        <ul>
+        {% for event in events %}
+            <li>
+                <strong>{{ event.date }}</strong>: {{ event.title }}
+                <a href="/detail/{{ event.id }}">詳細・編集</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>まだ予定がありません。</p>
+    {% endif %}
+
+</body>
+</html>

@@ -20,11 +20,15 @@ class Event(db.Model):
     def __repr__(self):
         return f"Event('{self.title}', '{self.date}')"
 
-# --- トップページ ---
+# --- トップページ（修正） ---
 @app.route('/')
 def index():
-    # 'Hello, Flask!' の表示と、作成ページへのリンク
-    return '<h1>Hello, Flask!</h1> <p><a href="/create">予定作成ページへ</a></p>'
+    # データベースから全ての予定（Event）を取得し、日付順に並べ替える
+    events = Event.query.order_by(Event.date).all()
+    
+    # 取得したデータを index_list.html に渡して表示
+    # ここで index_list.html をレンダリング（表示）します。
+    return render_template('index_list.html', events=events)
 
 # --- 予定の作成機能（CRUDの Create） ---
 @app.route('/create', methods=['GET', 'POST'])
