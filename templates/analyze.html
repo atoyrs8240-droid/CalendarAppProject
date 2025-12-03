@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>データ分析結果</title>
+</head>
+<body>
+    <h1>📈 予定のデータ分析結果</h1>
+    
+    <p>このページは、ESでアピールする「データ分析機能」を表示します。</p>
+
+    <h2>概要</h2>
+    <p>登録されている予定の総数: <strong>{{ analysis.total_events }} 件</strong></p>
+    
+    <h2>最新の登録データ</h2>
+    {{ data_table | safe }}
+    
+    <p><a href="/">予定一覧へ戻る</a></p>
+</body>
+</html>

@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import os 
+import pandas as pd
 
 # --- データベース設定（変更なし） ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -92,6 +93,32 @@ def delete_event(id):
         return redirect(url_for('index')) # トップページに戻る
     except:
         return '予定の削除中にエラーが発生しました'
+
+# --- データ分析機能（ESのアピールポイント） ---
+@app.route('/analyze')
+def analyze_events():
+    # データベースから全データをPandas DataFrameとして取得
+    # SQLクエリを使ってデータを取得
+    query = db.session.query(Event)
+    df = pd.read_sql(query.statement, db.engine)
+
+    # データの処理（ESでの分析内容をここに追加します）
+    if not df.empty:
+        # 簡易分析結果の計算例：予定の総数を計算
+        total_events = len(df)
+
+        # 分析結果をテンプレートに渡す辞書
+        analysis_data = {
+            'total_events': total_events,
+        }
+
+        # 取得したデータの一部（例: 最新5件）をHTMLテーブルにしてテンプレートに渡す
+        display_data = df.tail(5).to_html(classes='data', index=False)
+    else:
+        analysis_data = {'total_events': 0}
+        display_data = "<p>分析できるデータがありません。</p>"
+
+    return render_template('analyze.html', analysis=analysis_data, data_table=display_data)
 
 # --- サーバー起動部分（変更なし） ---
 if __name__ == '__main__':
