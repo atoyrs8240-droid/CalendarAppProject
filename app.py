@@ -17,9 +17,11 @@ class Event(db.Model):
     title = db.Column(db.String(100), nullable=False)
     date = db.Column(db.String(20), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    # --- 【ここを追記】 フィードバックの収集用カラム ---
+    satisfaction = db.Column(db.Integer, default=0, nullable=True) # 0:未評価, 1-5:満足度
+    # -----------------------------------------------
     
-    def __repr__(self):
-        return f"Event('{self.title}', '{self.date}')"
+    def __repr__(self):        return f"Event('{self.title}', '{self.date}')"
 
 # --- トップページ（修正） ---
 @app.route('/')
@@ -73,13 +75,14 @@ def update_event(id):
     event.title = request.form['title']
     event.date = request.form['date']
     event.description = request.form['description']
+    # --- 【ここを追記】 満足度データを取得 ---
+    event.satisfaction = request.form['satisfaction']
 
     try:
         db.session.commit() # 変更を確定
         return redirect(url_for('index')) # トップページに戻る
     except:
         return '予定の更新中にエラーが発生しました'
-
 
 # --- 予定の削除機能（CRUDの Delete） ---
 @app.route('/delete/<int:id>', methods=['POST'])

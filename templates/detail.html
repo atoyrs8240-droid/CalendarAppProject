@@ -17,6 +17,8 @@
         <textarea id="description" name="description">{{ event.description }}</textarea><br><br>
 
         <button type="submit">📝 変更を保存 (Update)</button>
+<label for="satisfaction">あなたの満足度 (1-5, 5が最高):</label>
+<input type="number" id="satisfaction" name="satisfaction" value="{{ event.satisfaction if event.satisfaction else 0 }}" min="0" max="5"><br><br>
     </form>
     
     <hr>
